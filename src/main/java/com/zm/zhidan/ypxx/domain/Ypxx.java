@@ -1,48 +1,76 @@
-package com.zm.zhidan.ypxx.entry;
+package com.zm.zhidan.ypxx.domain;
 
-import com.zm.zhidan.util.SyncFlag;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
-import java.io.Serializable;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+
 
 //@Entity
 //@Table(name = "ypxx")
 //public class Ypxx extends SyncFlag implements Serializable {
+@Document
 public class Ypxx {
 
     @Id
 //    @GeneratedValue(strategy = GenerationType.AUTO)
+//    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
 
-//    @Column(name = "bianma")
+    //    @Column(name = "bianma")
+    @Indexed
     private String bianma;
 
-//    @Column(name = "pinming")
+    //    @Column(name = "pinming")
+    @Indexed
     private String pinming;
 
-//    @Column(name = "guige")
+    //    @Column(name = "guige")
     private String guige;
 
-//    @Column(name = "pihao")
+    //    @Column(name = "pihao")
+    @Indexed
     private String pihao;
 
-//    @Column(name = "youxiaoqi")
+    //    @Column(name = "youxiaoqi")
     private String youxiaoqi;
 
-//    @Column(name = "danwei")
+    //    @Column(name = "danwei")
     private String danwei;
 
-//    @Column(name = "shuliang")
+    //    @Column(name = "shuliang")
     private String shuliang;
 
-//    @Column(name = "danjia")
+    //    @Column(name = "danjia")
     private String danjia;
 
-//    @Column(name = "shengchanchangjia")
+    //    @Column(name = "shengchanchangjia")
     private String shengchanchangjia;
 
-//    @Column(name = "pizhunwenhao")
+    //    @Column(name = "pizhunwenhao")
     private String pizhunwenhao;
+
+    private String createTime;
+
+    private String updateTime;
+
+    public String getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(String updateTime) {
+        this.updateTime = updateTime;
+    }
+
+    public String getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(String createTime) {
+        this.createTime = createTime;
+    }
 
     public long getId() {
         return id;
