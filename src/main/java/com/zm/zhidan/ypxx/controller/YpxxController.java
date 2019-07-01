@@ -14,7 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -102,10 +101,11 @@ public class YpxxController {
      * @return
      */
     @RequestMapping(value = "/uploadExcel", method = RequestMethod.POST)
-    public Flux<Ypxx> uploadExcel(@RequestParam(name = "file", value = "file", required = false) MultipartFile file) {
+//    public Flux<Ypxx> uploadExcel(@RequestParam(name = "file", value = "file", required = false) MultipartFile uploadFile) {
+    public Flux<Ypxx> uploadExcel(@RequestParam( value = "file", required = false) MultipartFile uploadFile) {
         InputStream inputStream = null;
         try {
-            inputStream = file.getInputStream();
+            inputStream = uploadFile.getInputStream();
             List<Object> data = EasyExcelFactory.read(inputStream, new Sheet(1, 0));
 
 
