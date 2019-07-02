@@ -9,15 +9,19 @@ import com.zm.zhidan.util.Util;
 import com.zm.zhidan.ypxx.domain.Ypxx;
 import com.zm.zhidan.ypxx.handler.YpxxHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.Type;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -31,6 +35,9 @@ public class YpxxController {
 
     @Autowired
     private YpxxHandler ypxxHandler;
+
+    @Value("${fileupload.path}")
+    private String fileUploadPath;
 
     /**
      * 保存药品信息
@@ -100,29 +107,49 @@ public class YpxxController {
      * @param file
      * @return
      */
-    @RequestMapping(value = "/uploadExcel", method = RequestMethod.POST)
-//    public Flux<Ypxx> uploadExcel(@RequestParam(name = "file", value = "file", required = false) MultipartFile uploadFile) {
-    public Flux<Ypxx> uploadExcel(@RequestParam( value = "file", required = false) MultipartFile uploadFile) {
+    @PostMapping(value = "/uploadExcel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Flux<Ypxx> uploadExcel(@RequestPart("file") FilePart file) {
         InputStream inputStream = null;
+        String filePath = fileUploadPath + "/" + System.currentTimeMillis() + ".xlsx";
+        File uploadFile = new File(filePath);
+//        file.transferTo(Paths.get(filePath));
+        List<Ypxx> ypxxList = new ArrayList<>();
+        file.transferTo(uploadFile);
         try {
-            inputStream = uploadFile.getInputStream();
-            List<Object> data = EasyExcelFactory.read(inputStream, new Sheet(1, 0));
-
-
-        } catch (IOException e) {
+            inputStream = new FileInputStream(filePath);
+            List<Object> data = EasyExcelFactory.read(inputStream, new Sheet(1, 1));
+            System.out.println(data);
+            for (int i = 0; i < data.size(); i++) {
+                List oneData = (ArrayList) data.get(i);
+                Ypxx ypxx = new Ypxx();
+                ypxx.setBianma(oneData.get(0).toString());
+                ypxx.setPinming(oneData.get(1).toString());
+                ypxx.setGuige(oneData.get(2).toString());
+                ypxx.setPihao(oneData.get(3).toString());
+                ypxx.setYouxiaoqi(oneData.get(4).toString());
+                ypxx.setDanwei(oneData.get(5).toString());
+                ypxx.setShuliang(oneData.get(6).toString());
+                ypxx.setDanjia(oneData.get(7).toString());
+                ypxx.setShengchanchangjia(oneData.get(8).toString());
+                ypxx.setPizhunwenhao(oneData.get(9).toString());
+                String nowDate = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
+                ypxx.setId(System.currentTimeMillis() + i);
+                ypxx.setCreateTime(nowDate);
+                ypxx.setUpdateTime(nowDate);
+                ypxxList.add(ypxx);
+            }
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
-        } finally {
+        }finally {
             try {
                 inputStream.close();
+                uploadFile.delete();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-//        JSONObject parse = (JSONObject)JSON.parse(param);
-//        Long bianMa = Long.parseLong(parse.get("formData").toString());
-        Long bianMa = 0L;
-        return ypxxHandler.queryYpxxByBianMa(bianMa);
+        return ypxxHandler.saveAllYpxx(ypxxList);
     }
 
 

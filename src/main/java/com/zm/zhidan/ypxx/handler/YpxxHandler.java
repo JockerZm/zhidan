@@ -27,17 +27,15 @@ public class YpxxHandler {
     public Mono<Ypxx> addOrUpadteYpxx(Ypxx ypxx) {
         Mono<Boolean> booleanMono = ypxxRepository.existsById(ypxx.getId());
         if (ypxx.getId() == 0) {
-            ypxx.setId(new Date().getTime());
+            ypxx.setId(System.currentTimeMillis());
         } else {
             ypxxRepository.deleteById(ypxx.getId());
         }
         return ypxxRepository.save(ypxx);
     }
 
-    public Mono<Ypxx> updateYpxx(Ypxx ypxx) {
-//        ypxxRepository.findById(ypxx.getId());
-        ypxxRepository.findById(ypxx.getId());
-        return ypxxRepository.save(ypxx);
+    public Flux<Ypxx> saveAllYpxx(List<Ypxx> ypxxList) {
+        return ypxxRepository.saveAll(ypxxList);
     }
 
     public Flux<Ypxx> queryYpxxList(Integer pageNo, Integer pageCount) {
