@@ -1,7 +1,9 @@
 package com.zm.zhidan.ypxx.controller;
 
 import com.alibaba.excel.EasyExcelFactory;
+import com.alibaba.excel.ExcelWriter;
 import com.alibaba.excel.metadata.Sheet;
+import com.alibaba.excel.support.ExcelTypeEnum;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
@@ -10,23 +12,25 @@ import com.zm.zhidan.ypxx.domain.Ypxx;
 import com.zm.zhidan.ypxx.handler.YpxxHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ZeroCopyHttpOutputMessage;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.lang.reflect.Type;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 import static com.alibaba.fastjson.JSON.parseObject;
-import static com.alibaba.fastjson.JSON.toJSONStringWithDateFormat;
 
 @RestController
 @RequestMapping(value = "/zhidan/ypxx")
@@ -110,7 +114,7 @@ public class YpxxController {
     @PostMapping(value = "/uploadExcel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Flux<Ypxx> uploadExcel(@RequestPart("file") FilePart file) {
         InputStream inputStream = null;
-        String filePath = fileUploadPath + "/" + System.currentTimeMillis() + ".xlsx";
+        String filePath = fileUploadPath + File.separator + System.currentTimeMillis() + ".xlsx";
         File uploadFile = new File(filePath);
 //        file.transferTo(Paths.get(filePath));
         List<Ypxx> ypxxList = new ArrayList<>();
@@ -140,7 +144,7 @@ public class YpxxController {
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             try {
                 inputStream.close();
                 uploadFile.delete();
@@ -148,9 +152,75 @@ public class YpxxController {
                 e.printStackTrace();
             }
         }
-
         return ypxxHandler.saveAllYpxx(ypxxList);
     }
+
+    /**
+     * 查询药品编码对应的药品信息
+     *
+     * @param param
+     * @return
+     */
+    @RequestMapping(value = "/downloadExcel", method = RequestMethod.POST)
+    public  Mono<Void> downloadExcel(@RequestBody String param, ServerHttpResponse response) throws IOException {
+        String nowDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        //文件名
+        String fileName ="制单"+ nowDate + UUID.randomUUID().toString() + ".xls";
+        //文件全路径
+
+
+        ZeroCopyHttpOutputMessage zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
+        zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
+        System.out.println(MediaType.asMediaType(MimeType.valueOf(fileUploadPath + File.separator + fileName)));
+        zeroCopyResponse.getHeaders().setContentType(MediaType.asMediaType(MimeType.valueOf(fileUploadPath + File.separator + fileName)));
+
+        //解析数据
+        JSONObject parse = (JSONObject) JSON.parse(param);
+        String cartsMoney = parse.get("cartsMoney").toString();
+        List<Map<String, String>> cartProducts = (List<Map<String, String>>) parse.get("cartProducts");
+
+        ServletOutputStream out = null;
+        /*try {
+
+            out = response.getOutputStream();
+            response.setContentType("multipart/form-data");
+            response.setCharacterEncoding("utf-8");
+            response.setHeader("Content-disposition", "attachment;filename=" + fileName + ".xlsx");
+            ExcelWriter writer = new ExcelWriter(out, ExcelTypeEnum.XLSX, true);
+
+
+            Sheet sheet1 = new Sheet(1, 0);
+            sheet1.setSheetName("第一个sheet");
+            ArrayList<List<String>> lists = new ArrayList<>();
+//            writer.write0(ypxxHandler.getListString(), sheet1);
+            writer.write0(lists, sheet1);
+            writer.finish();
+
+            out.flush();
+
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
+        ClassPathResource fileResource = new ClassPathResource(fileUploadPath + File.separator + fileName);
+        System.out.println(fileResource.toString());
+        File uploadPath = new File(fileUploadPath);
+        if(!uploadPath.exists()){
+            uploadPath.mkdir();
+        }
+        File file = new File(fileUploadPath, fileName);
+        if (!file.exists()) {
+            file.createNewFile();
+        }
+
+//        File file1 = fileResource.getFile();
+
+//        return ypxxHandler.queryYpxxByBianMa(10000000);
+        return zeroCopyResponse.writeWith(file, 0, file.length());
+    }
+
 
 
 }
