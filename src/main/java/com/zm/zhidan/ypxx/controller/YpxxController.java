@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.ZeroCopyHttpOutputMessage;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -22,11 +23,9 @@ import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -162,48 +161,22 @@ public class YpxxController {
      * @return
      */
     @RequestMapping(value = "/downloadExcel", method = RequestMethod.POST)
-    public  Mono<Void> downloadExcel(@RequestBody String param, ServerHttpResponse response) throws IOException {
+    public ResponseEntity<Object> downloadExcel(@RequestBody String param, ServerHttpResponse response) throws IOException {
         String nowDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
         //文件名
-        String fileName ="制单"+ nowDate + UUID.randomUUID().toString() + ".xls";
+        String fileName ="制单"+ nowDate + UUID.randomUUID().toString() + ".xlsx";
         //文件全路径
-
+        response.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(fileName));
+        response.getHeaders().setContentType(MediaType.valueOf("application/vnd.ms-excel;charset=UTF-8"));
 
         ZeroCopyHttpOutputMessage zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
-        zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
-        System.out.println(MediaType.asMediaType(MimeType.valueOf(fileUploadPath + File.separator + fileName)));
-        zeroCopyResponse.getHeaders().setContentType(MediaType.asMediaType(MimeType.valueOf(fileUploadPath + File.separator + fileName)));
-
+        zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(fileName));
+        zeroCopyResponse.getHeaders().setContentType(MediaType.valueOf("application/vnd.ms-excel;charset=UTF-8"));
         //解析数据
         JSONObject parse = (JSONObject) JSON.parse(param);
         String cartsMoney = parse.get("cartsMoney").toString();
         List<Map<String, String>> cartProducts = (List<Map<String, String>>) parse.get("cartProducts");
 
-        ServletOutputStream out = null;
-        /*try {
-
-            out = response.getOutputStream();
-            response.setContentType("multipart/form-data");
-            response.setCharacterEncoding("utf-8");
-            response.setHeader("Content-disposition", "attachment;filename=" + fileName + ".xlsx");
-            ExcelWriter writer = new ExcelWriter(out, ExcelTypeEnum.XLSX, true);
-
-
-            Sheet sheet1 = new Sheet(1, 0);
-            sheet1.setSheetName("第一个sheet");
-            ArrayList<List<String>> lists = new ArrayList<>();
-//            writer.write0(ypxxHandler.getListString(), sheet1);
-            writer.write0(lists, sheet1);
-            writer.finish();
-
-            out.flush();
-
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
         ClassPathResource fileResource = new ClassPathResource(fileUploadPath + File.separator + fileName);
         System.out.println(fileResource.toString());
         File uploadPath = new File(fileUploadPath);
@@ -215,10 +188,35 @@ public class YpxxController {
             file.createNewFile();
         }
 
+         try {
+             FileOutputStream fileOutputStream = new FileOutputStream(file);
+             ExcelWriter writer = new ExcelWriter(fileOutputStream, ExcelTypeEnum.XLSX, true);
+
+
+            Sheet sheet1 = new Sheet(1, 0);
+            sheet1.setSheetName("第一个sheet");
+            ArrayList<List<String>> lists = new ArrayList<>();
+//            writer.write0(ypxxHandler.getListString(), sheet1);
+            writer.write0(lists, sheet1);
+            writer.finish();
+
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 //        File file1 = fileResource.getFile();
 
 //        return ypxxHandler.queryYpxxByBianMa(10000000);
-        return zeroCopyResponse.writeWith(file, 0, file.length());
+//        return zeroCopyResponse.writeWith(file, 0, file.length());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.ms-excel")
+//                .header(HttpHeaders.CONTENT_LENGTH, file.length())
+                .header("Connection", "close")
+                .body(file);
     }
 
 
