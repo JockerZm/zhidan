@@ -7,25 +7,25 @@ import com.alibaba.excel.support.ExcelTypeEnum;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
+import com.zm.zhidan.ypxx.handler.StyleExcelHandler;
 import com.zm.zhidan.util.Util;
 import com.zm.zhidan.ypxx.domain.Ypxx;
 import com.zm.zhidan.ypxx.handler.YpxxHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.ZeroCopyHttpOutputMessage;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.URLEncoder;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -136,7 +136,7 @@ public class YpxxController {
                 ypxx.setShengchanchangjia(oneData.get(8).toString());
                 ypxx.setPizhunwenhao(oneData.get(9).toString());
                 String nowDate = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
-                ypxx.setId(System.currentTimeMillis() + i);
+                ypxx.setId(UUID.randomUUID().toString());
                 ypxx.setCreateTime(nowDate);
                 ypxx.setUpdateTime(nowDate);
                 ypxxList.add(ypxx);
@@ -155,68 +155,70 @@ public class YpxxController {
     }
 
     /**
-     * 查询药品编码对应的药品信息
-     *
+     *  生成excel文件
      * @param param
+     * @param response
      * @return
+     * @throws IOException
      */
-    @RequestMapping(value = "/downloadExcel", method = RequestMethod.POST)
-    public ResponseEntity<Object> downloadExcel(@RequestBody String param, ServerHttpResponse response) throws IOException {
-        String nowDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+    @PostMapping(value = "/getExcelFile")
+    public Mono<String> getExcelFile(@RequestBody String param, ServerHttpResponse response) throws IOException {
+        JSONObject parse = (JSONObject) JSON.parse(param);
+        String nowDate = new SimpleDateFormat("yyyy-MM-dd-HHmmssSSS").format(new Date());
+        String cartsMoney = (String)parse.get("cartsMoney");
+        List cartsProducts = (List<JSONObject>) parse.get("cartProducts");
+
+        List<List<String>> excelData = ypxxHandler.getExcelData(cartsProducts, cartsMoney);
+        List<List<String>> excelHead = ypxxHandler.getExcelHead();
+        Map excelWidth = ypxxHandler.getExcelWidth();
         //文件名
-        String fileName ="制单"+ nowDate + UUID.randomUUID().toString() + ".xlsx";
-        //文件全路径
-        response.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(fileName));
-        response.getHeaders().setContentType(MediaType.valueOf("application/vnd.ms-excel;charset=UTF-8"));
+        String filePath = fileUploadPath + File.separator + nowDate + ".xlsx";
+        FileOutputStream fileOutputStream = new FileOutputStream(filePath);
+        StyleExcelHandler hanlder = new StyleExcelHandler();
+        ExcelWriter writer = new ExcelWriter(null, fileOutputStream, ExcelTypeEnum.XLSX, true, hanlder);
+
+        Sheet sheet1 = new Sheet(1, 3);
+        sheet1.setSheetName("第一个sheet");
+        sheet1.setColumnWidthMap(excelWidth);
+        sheet1.setAutoWidth(Boolean.TRUE);
+
+        sheet1.setHead(excelHead);
+        writer.write0(excelData, sheet1);
+
+        //关闭资源
+        writer.finish();
+        fileOutputStream.flush();
+        fileOutputStream.close();
+
+        return Mono.just(filePath);
+    }
+
+    @GetMapping("/downloadExcel1")
+    public Mono<Void> downloadExcel1(@MatrixVariable String filePath,ServerHttpResponse response) {
+        String nowDate = new SimpleDateFormat("yyyy-MM-dd-HHmmssSSS").format(new Date());
 
         ZeroCopyHttpOutputMessage zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
-        zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + URLEncoder.encode(fileName));
-        zeroCopyResponse.getHeaders().setContentType(MediaType.valueOf("application/vnd.ms-excel;charset=UTF-8"));
-        //解析数据
-        JSONObject parse = (JSONObject) JSON.parse(param);
-        String cartsMoney = parse.get("cartsMoney").toString();
-        List<Map<String, String>> cartProducts = (List<Map<String, String>>) parse.get("cartProducts");
+//        String filePath = "";
 
-        ClassPathResource fileResource = new ClassPathResource(fileUploadPath + File.separator + fileName);
-        System.out.println(fileResource.toString());
-        File uploadPath = new File(fileUploadPath);
-        if(!uploadPath.exists()){
-            uploadPath.mkdir();
-        }
-        File file = new File(fileUploadPath, fileName);
-        if (!file.exists()) {
-            file.createNewFile();
-        }
-
-         try {
-             FileOutputStream fileOutputStream = new FileOutputStream(file);
-             ExcelWriter writer = new ExcelWriter(fileOutputStream, ExcelTypeEnum.XLSX, true);
-
-
-            Sheet sheet1 = new Sheet(1, 0);
-            sheet1.setSheetName("第一个sheet");
-            ArrayList<List<String>> lists = new ArrayList<>();
-//            writer.write0(ypxxHandler.getListString(), sheet1);
-            writer.write0(lists, sheet1);
-            writer.finish();
-
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        File file = new File(filePath);
+        String fileName = null;
+        try {
+            fileName = new String(file.getName().getBytes(), "iso-8859-1");
+        } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+        zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
+        zeroCopyResponse.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-//        File file1 = fileResource.getFile();
 
-//        return ypxxHandler.queryYpxxByBianMa(10000000);
-//        return zeroCopyResponse.writeWith(file, 0, file.length());
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
-                .header(HttpHeaders.CONTENT_TYPE, "application/vnd.ms-excel")
-//                .header(HttpHeaders.CONTENT_LENGTH, file.length())
-                .header("Connection", "close")
-                .body(file);
+        return zeroCopyResponse.writeWith(file,0,file.length());
+    }
+
+    @GetMapping("/downloadExcel")
+    public Mono<String> downloadExcel(ServerHttpResponse response) {
+        String s = "s";
+
+        return Mono.just(s);
     }
 
 

@@ -4,6 +4,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.UUID;
+
 
 //@Entity
 //@Table(name = "ypxx")
@@ -14,7 +16,7 @@ public class Ypxx {
     @Id
 //    @GeneratedValue(strategy = GenerationType.AUTO)
 //    @GeneratedValue(strategy = GenerationType.AUTO)
-    private long id;
+    private String id;
 
     //    @Column(name = "bianma")
     @Indexed
@@ -69,11 +71,11 @@ public class Ypxx {
         this.createTime = createTime;
     }
 
-    public long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

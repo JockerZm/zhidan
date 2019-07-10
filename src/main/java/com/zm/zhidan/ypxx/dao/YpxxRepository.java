@@ -14,4 +14,8 @@ public interface YpxxRepository extends ReactiveMongoRepository<Ypxx, Long> {
 
     Flux<Ypxx> findByBianmaIsLike(Long bianma);
 
+    Mono<Void> deleteById(String id);
+
+    Mono<Boolean> existsById(String id);
+
 }
