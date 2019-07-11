@@ -14,41 +14,29 @@ import java.util.UUID;
 public class Ypxx {
 
     @Id
-//    @GeneratedValue(strategy = GenerationType.AUTO)
-//    @GeneratedValue(strategy = GenerationType.AUTO)
     private String id;
 
-    //    @Column(name = "bianma")
     @Indexed
     private String bianma;
 
-    //    @Column(name = "pinming")
     @Indexed
     private String pinming;
 
-    //    @Column(name = "guige")
     private String guige;
 
-    //    @Column(name = "pihao")
     @Indexed
     private String pihao;
 
-    //    @Column(name = "youxiaoqi")
     private String youxiaoqi;
 
-    //    @Column(name = "danwei")
     private String danwei;
 
-    //    @Column(name = "shuliang")
     private String shuliang;
 
-    //    @Column(name = "danjia")
     private String danjia;
 
-    //    @Column(name = "shengchanchangjia")
     private String shengchanchangjia;
 
-    //    @Column(name = "pizhunwenhao")
     private String pizhunwenhao;
 
     private String createTime;

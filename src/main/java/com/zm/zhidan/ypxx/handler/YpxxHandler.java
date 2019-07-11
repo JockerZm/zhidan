@@ -47,9 +47,6 @@ public class YpxxHandler {
     }
 
     public Mono<Void> deleteYpxx(List<Ypxx> list) {
-//        for (Ypxx ypxx : list) {
-//            Mono<Void> voidMono = ypxxRepository.deleteById(ypxx.getId());
-//        }
         return ypxxRepository.deleteAll(list);
     }
 

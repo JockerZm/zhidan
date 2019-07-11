@@ -69,7 +69,6 @@ public class YpxxController {
     public Flux<Ypxx> queryYpxxList(@RequestBody String param) {
         JSONObject parse = (JSONObject) JSON.parse(param);
         Integer page = Integer.valueOf(parse.get("page").toString());
-        String nowDate = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
         return ypxxHandler.queryYpxxList(page, Util.PAGECOUNT);
     }
 
@@ -100,12 +99,17 @@ public class YpxxController {
     @RequestMapping(value = "/queryYpxxByBianMa", method = RequestMethod.POST)
     public Flux<Ypxx> queryYpxxByBianMa(@RequestBody String param) {
         JSONObject parse = (JSONObject) JSON.parse(param);
-        Long bianMa = Long.parseLong(parse.get("formData").toString());
-        return ypxxHandler.queryYpxxByBianMa(bianMa);
+        String formData = parse.get("formData").toString();
+        if (formData.equals("") || formData == "") {
+            return ypxxHandler.queryYpxxList(1, Util.PAGECOUNT);
+        }else {
+            Long bianMa = Long.parseLong(formData);
+            return ypxxHandler.queryYpxxByBianMa(bianMa);
+        }
     }
 
     /**
-     * 查询药品编码对应的药品信息
+     * 批量导入药品信息
      *
      * @param file
      * @return
@@ -113,9 +117,9 @@ public class YpxxController {
     @PostMapping(value = "/uploadExcel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Flux<Ypxx> uploadExcel(@RequestPart("file") FilePart file) {
         InputStream inputStream = null;
-        String filePath = fileUploadPath + File.separator + System.currentTimeMillis() + ".xlsx";
+        String nowDate1 = new SimpleDateFormat("yyyy-MM-dd-HHmmssSSS").format(new Date());
+        String filePath = fileUploadPath + File.separator + "上传"+nowDate1 + ".xlsx";
         File uploadFile = new File(filePath);
-//        file.transferTo(Paths.get(filePath));
         List<Ypxx> ypxxList = new ArrayList<>();
         file.transferTo(uploadFile);
         try {
@@ -146,7 +150,7 @@ public class YpxxController {
         } finally {
             try {
                 inputStream.close();
-                uploadFile.delete();
+//                uploadFile.delete();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -157,12 +161,11 @@ public class YpxxController {
     /**
      *  生成excel文件
      * @param param
-     * @param response
      * @return
      * @throws IOException
      */
     @PostMapping(value = "/getExcelFile")
-    public Mono<String> getExcelFile(@RequestBody String param, ServerHttpResponse response) throws IOException {
+    public Mono<String> getExcelFile(@RequestBody String param){
         JSONObject parse = (JSONObject) JSON.parse(param);
         String nowDate = new SimpleDateFormat("yyyy-MM-dd-HHmmssSSS").format(new Date());
         String cartsMoney = (String)parse.get("cartsMoney");
@@ -173,32 +176,39 @@ public class YpxxController {
         Map excelWidth = ypxxHandler.getExcelWidth();
         //文件名
         String filePath = fileUploadPath + File.separator + nowDate + ".xlsx";
-        FileOutputStream fileOutputStream = new FileOutputStream(filePath);
-        StyleExcelHandler hanlder = new StyleExcelHandler();
-        ExcelWriter writer = new ExcelWriter(null, fileOutputStream, ExcelTypeEnum.XLSX, true, hanlder);
+        try {
+            FileOutputStream fileOutputStream = new FileOutputStream(filePath);
+            StyleExcelHandler hanlder = new StyleExcelHandler();
+            ExcelWriter writer = new ExcelWriter(null, fileOutputStream, ExcelTypeEnum.XLSX, true, hanlder);
 
-        Sheet sheet1 = new Sheet(1, 3);
-        sheet1.setSheetName("第一个sheet");
-        sheet1.setColumnWidthMap(excelWidth);
-        sheet1.setAutoWidth(Boolean.TRUE);
+            Sheet sheet1 = new Sheet(1, 3);
+            sheet1.setSheetName("第一个sheet");
+            sheet1.setColumnWidthMap(excelWidth);
+            sheet1.setAutoWidth(Boolean.TRUE);
 
-        sheet1.setHead(excelHead);
-        writer.write0(excelData, sheet1);
+            sheet1.setHead(excelHead);
+            writer.write0(excelData, sheet1);
 
-        //关闭资源
-        writer.finish();
-        fileOutputStream.flush();
-        fileOutputStream.close();
+            //关闭资源
+            writer.finish();
+            fileOutputStream.flush();
+            fileOutputStream.close();
+        } catch (Exception e) {
+            System.out.println(e);
 
+        }
         return Mono.just(filePath);
     }
 
-    @GetMapping("/downloadExcel1")
-    public Mono<Void> downloadExcel1(@MatrixVariable String filePath,ServerHttpResponse response) {
-        String nowDate = new SimpleDateFormat("yyyy-MM-dd-HHmmssSSS").format(new Date());
-
+    /**
+     *  下载excel文件
+     * @param filePath
+     * @param response
+     * @return
+     */
+    @GetMapping("/downloadExcel")
+    public Mono<Void> downloadExcel(@RequestParam("filePath") String filePath,ServerHttpResponse response) {
         ZeroCopyHttpOutputMessage zeroCopyResponse = (ZeroCopyHttpOutputMessage) response;
-//        String filePath = "";
 
         File file = new File(filePath);
         String fileName = null;
@@ -207,20 +217,11 @@ public class YpxxController {
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+        zeroCopyResponse.getHeaders().set(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         zeroCopyResponse.getHeaders().set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
         zeroCopyResponse.getHeaders().setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-
         return zeroCopyResponse.writeWith(file,0,file.length());
     }
-
-    @GetMapping("/downloadExcel")
-    public Mono<String> downloadExcel(ServerHttpResponse response) {
-        String s = "s";
-
-        return Mono.just(s);
-    }
-
-
 
 }
