@@ -12,7 +12,7 @@
     <artifactId>zhidan</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>zhidan</name>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
     <description>王玉的制单系统</description>
 
     <properties>

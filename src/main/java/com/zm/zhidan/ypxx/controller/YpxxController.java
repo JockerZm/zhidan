@@ -129,16 +129,28 @@ public class YpxxController {
             for (int i = 0; i < data.size(); i++) {
                 List oneData = (ArrayList) data.get(i);
                 Ypxx ypxx = new Ypxx();
-                ypxx.setBianma(oneData.get(0).toString());
-                ypxx.setPinming(oneData.get(1).toString());
-                ypxx.setGuige(oneData.get(2).toString());
-                ypxx.setPihao(oneData.get(3).toString());
-                ypxx.setYouxiaoqi(oneData.get(4).toString());
-                ypxx.setDanwei(oneData.get(5).toString());
-                ypxx.setShuliang(oneData.get(6).toString());
-                ypxx.setDanjia(oneData.get(7).toString());
-                ypxx.setShengchanchangjia(oneData.get(8).toString());
-                ypxx.setPizhunwenhao(oneData.get(9).toString());
+                ypxx.setBianma((String) oneData.get(0));
+                ypxx.setPinming((String)oneData.get(1));
+                ypxx.setGuige((String)oneData.get(2));
+                ypxx.setPihao((String)oneData.get(3));
+                ypxx.setYouxiaoqi((String)oneData.get(4));
+                ypxx.setDanwei((String)oneData.get(5));
+                ypxx.setShengchanchangjia((String)oneData.get(6));
+                if(oneData.size() > 7 ){
+                    if(!oneData.get(7).equals("") && oneData.get(7) != null){
+                        ypxx.setDanjia((String)oneData.get(7));
+                    }
+                }
+                if (oneData.size() > 8) {
+                    if(!oneData.get(8).equals("") && oneData.get(8) != null){
+                        ypxx.setShengchanchangjia((String)oneData.get(8));
+                    }
+                }
+                if (oneData.size() > 9) {
+                    if(!oneData.get(9).equals("") && oneData.get(9) != null){
+                        ypxx.setPizhunwenhao((String)oneData.get(9));
+                    }
+                }
                 String nowDate = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(new Date());
                 ypxx.setId(UUID.randomUUID().toString());
                 ypxx.setCreateTime(nowDate);
